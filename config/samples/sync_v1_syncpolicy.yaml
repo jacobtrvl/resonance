@@ -1,9 +1,9 @@
 apiVersion: sync.io.github.jacobtrvl/v1
 kind: SyncPolicy
 metadata:
-  labels:
-    app.kubernetes.io/name: resonance
-    app.kubernetes.io/managed-by: kustomize
   name: syncpolicy-sample
+  namespace: default
 spec:
-  # TODO(user): Add fields here
+  remoteClusterConfig:
+    kubeconfigSecretName: remote-cluster-kubeconfig
+    kubeconfigSecretNamespace: default

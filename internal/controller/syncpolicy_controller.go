@@ -18,11 +18,19 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	syncv1 "github.com/jacobtrvl/resonance/api/v1"
 )
@@ -36,22 +44,86 @@ type SyncPolicyReconciler struct {
 // +kubebuilder:rbac:groups=sync.io.github.jacobtrvl,resources=syncpolicies,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=sync.io.github.jacobtrvl,resources=syncpolicies/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=sync.io.github.jacobtrvl,resources=syncpolicies/finalizers,verbs=update
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the SyncPolicy object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.21.0/pkg/reconcile
 func (r *SyncPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = logf.FromContext(ctx)
+	log := log.FromContext(ctx)
 
-	// TODO(user): your logic here
+	// Fetch the SyncPolicy instance
+	syncPolicy := &syncv1.SyncPolicy{}
+	if err := r.Get(ctx, req.NamespacedName, syncPolicy); err != nil {
+		if errors.IsNotFound(err) {
+			// Request object not found, could have been deleted after reconcile request.
+			// Return and don't requeue
+			log.Info("SyncPolicy resource not found. Ignoring since object must be deleted")
+			return ctrl.Result{}, nil
+		}
+		// Error reading the object - requeue the request.
+		log.Error(err, "Failed to get SyncPolicy")
+		return ctrl.Result{}, err
+	}
 
-	return ctrl.Result{}, nil
+	// Get the kubeconfig secret for the remote cluster
+	kubeconfigSecret := &corev1.Secret{}
+	err := r.Get(ctx, types.NamespacedName{
+		Name:      syncPolicy.Spec.RemoteClusterConfig.KubeconfigSecretName,
+		Namespace: syncPolicy.Spec.RemoteClusterConfig.KubeconfigSecretNamespace,
+	}, kubeconfigSecret)
+	if err != nil {
+		log.Error(err, "Failed to get kubeconfig secret")
+		syncPolicy.Status.SyncStatus = "Error"
+		syncPolicy.Status.ErrorMessage = fmt.Sprintf("Failed to get kubeconfig secret: %v", err)
+		if err := r.Status().Update(ctx, syncPolicy); err != nil {
+			log.Error(err, "Failed to update SyncPolicy status")
+		}
+		return ctrl.Result{}, err
+	}
+
+	// Create a selector for resources with clusterSync=true label
+	selector := labels.SelectorFromSet(labels.Set{"clusterSync": "true"})
+
+	// List all resources with the clusterSync=true label
+	// Note: This is a simplified example. In a real implementation, you would need to:
+	// 1. List different types of resources (Pods, Services, ConfigMaps, etc.)
+	// 2. Handle each resource type appropriately
+	// 3. Implement proper error handling and retry logic
+	// 4. Add proper synchronization mechanisms
+
+	// Example for Pods
+	podList := &corev1.PodList{}
+	if err := r.List(ctx, podList, &client.ListOptions{LabelSelector: selector}); err != nil {
+		log.Error(err, "Failed to list pods")
+		syncPolicy.Status.SyncStatus = "Error"
+		syncPolicy.Status.ErrorMessage = fmt.Sprintf("Failed to list pods: %v", err)
+		if err := r.Status().Update(ctx, syncPolicy); err != nil {
+			log.Error(err, "Failed to update SyncPolicy status")
+		}
+		return ctrl.Result{}, err
+	}
+
+	// TODO: Implement the actual sync logic to the remote cluster
+	// This would involve:
+	// 1. Creating a client for the remote cluster using the kubeconfig
+	// 2. Syncing each resource to the remote cluster
+	// 3. Handling conflicts and updates
+	// 4. Implementing proper error handling and retry logic
+
+	// Update the status
+	syncPolicy.Status.LastSyncTime = &metav1.Time{Time: time.Now()}
+	syncPolicy.Status.SyncStatus = "Synced"
+	syncPolicy.Status.ErrorMessage = ""
+	if err := r.Status().Update(ctx, syncPolicy); err != nil {
+		log.Error(err, "Failed to update SyncPolicy status")
+		return ctrl.Result{}, err
+	}
+
+	// Requeue after 5 minutes to check for updates
+	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -59,5 +131,6 @@ func (r *SyncPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&syncv1.SyncPolicy{}).
 		Named("syncpolicy").
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }
