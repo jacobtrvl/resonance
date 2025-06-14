@@ -1,0 +1,84 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
+  name: clustersyncs.sync.io.github.jacobtrvl
+spec:
+  group: sync.io.github.jacobtrvl
+  names:
+    kind: ClusterSync
+    listKind: ClusterSyncList
+    plural: clustersyncs
+    singular: clustersync
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: ClusterSync is the Schema for the clustersyncs API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ClusterSyncSpec defines the desired state of ClusterSync.
+            properties:
+              foo:
+                description: Foo is an example field of ClusterSync. Edit syncpolicy_types.go
+                  to remove/update
+                type: string
+              remoteClusterConfig:
+                description: RemoteClusterConfig contains the configuration for the
+                  remote cluster
+                properties:
+                  kubeconfigSecretName:
+                    description: KubeconfigSecretName is the name of the secret containing
+                      the kubeconfig for the remote cluster
+                    type: string
+                  kubeconfigSecretNamespace:
+                    description: KubeconfigSecretNamespace is the namespace where
+                      the kubeconfig secret is stored
+                    type: string
+                required:
+                - kubeconfigSecretName
+                - kubeconfigSecretNamespace
+                type: object
+            required:
+            - remoteClusterConfig
+            type: object
+          status:
+            description: ClusterSyncStatus defines the observed state of ClusterSync.
+            properties:
+              errorMessage:
+                description: ErrorMessage contains any error message if sync failed
+                type: string
+              lastSyncTime:
+                description: LastSyncTime is the timestamp of the last successful
+                  sync
+                format: date-time
+                type: string
+              syncStatus:
+                description: SyncStatus indicates the current sync status
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

@@ -35,15 +35,15 @@ import (
 	syncv1 "github.com/jacobtrvl/resonance/api/v1"
 )
 
-// SyncPolicyReconciler reconciles a SyncPolicy object
-type SyncPolicyReconciler struct {
+// ClusterSyncReconciler reconciles a ClusterSync object
+type ClusterSyncReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=sync.io.github.jacobtrvl,resources=syncpolicies,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=sync.io.github.jacobtrvl,resources=syncpolicies/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=sync.io.github.jacobtrvl,resources=syncpolicies/finalizers,verbs=update
+// +kubebuilder:rbac:groups=sync.io.github.jacobtrvl,resources=clustersyncs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=sync.io.github.jacobtrvl,resources=clustersyncs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=sync.io.github.jacobtrvl,resources=clustersyncs/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch
@@ -51,35 +51,35 @@ type SyncPolicyReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-func (r *SyncPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *ClusterSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
-	// Fetch the SyncPolicy instance
-	syncPolicy := &syncv1.SyncPolicy{}
-	if err := r.Get(ctx, req.NamespacedName, syncPolicy); err != nil {
+	// Fetch the ClusterSync instance
+	clusterSync := &syncv1.ClusterSync{}
+	if err := r.Get(ctx, req.NamespacedName, clusterSync); err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Return and don't requeue
-			log.Info("SyncPolicy resource not found. Ignoring since object must be deleted")
+			log.Info("ClusterSync resource not found. Ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		log.Error(err, "Failed to get SyncPolicy")
+		log.Error(err, "Failed to get ClusterSync")
 		return ctrl.Result{}, err
 	}
 
 	// Get the kubeconfig secret for the remote cluster
 	kubeconfigSecret := &corev1.Secret{}
 	err := r.Get(ctx, types.NamespacedName{
-		Name:      syncPolicy.Spec.RemoteClusterConfig.KubeconfigSecretName,
-		Namespace: syncPolicy.Spec.RemoteClusterConfig.KubeconfigSecretNamespace,
+		Name:      clusterSync.Spec.RemoteClusterConfig.KubeconfigSecretName,
+		Namespace: clusterSync.Spec.RemoteClusterConfig.KubeconfigSecretNamespace,
 	}, kubeconfigSecret)
 	if err != nil {
 		log.Error(err, "Failed to get kubeconfig secret")
-		syncPolicy.Status.SyncStatus = "Error"
-		syncPolicy.Status.ErrorMessage = fmt.Sprintf("Failed to get kubeconfig secret: %v", err)
-		if err := r.Status().Update(ctx, syncPolicy); err != nil {
-			log.Error(err, "Failed to update SyncPolicy status")
+		clusterSync.Status.SyncStatus = "Error"
+		clusterSync.Status.ErrorMessage = fmt.Sprintf("Failed to get kubeconfig secret: %v", err)
+		if err := r.Status().Update(ctx, clusterSync); err != nil {
+			log.Error(err, "Failed to update ClusterSync status")
 		}
 		return ctrl.Result{}, err
 	}
@@ -98,10 +98,10 @@ func (r *SyncPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	podList := &corev1.PodList{}
 	if err := r.List(ctx, podList, &client.ListOptions{LabelSelector: selector}); err != nil {
 		log.Error(err, "Failed to list pods")
-		syncPolicy.Status.SyncStatus = "Error"
-		syncPolicy.Status.ErrorMessage = fmt.Sprintf("Failed to list pods: %v", err)
-		if err := r.Status().Update(ctx, syncPolicy); err != nil {
-			log.Error(err, "Failed to update SyncPolicy status")
+		clusterSync.Status.SyncStatus = "Error"
+		clusterSync.Status.ErrorMessage = fmt.Sprintf("Failed to list pods: %v", err)
+		if err := r.Status().Update(ctx, clusterSync); err != nil {
+			log.Error(err, "Failed to update ClusterSync status")
 		}
 		return ctrl.Result{}, err
 	}
@@ -114,11 +114,11 @@ func (r *SyncPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// 4. Implementing proper error handling and retry logic
 
 	// Update the status
-	syncPolicy.Status.LastSyncTime = &metav1.Time{Time: time.Now()}
-	syncPolicy.Status.SyncStatus = "Synced"
-	syncPolicy.Status.ErrorMessage = ""
-	if err := r.Status().Update(ctx, syncPolicy); err != nil {
-		log.Error(err, "Failed to update SyncPolicy status")
+	clusterSync.Status.LastSyncTime = &metav1.Time{Time: time.Now()}
+	clusterSync.Status.SyncStatus = "Synced"
+	clusterSync.Status.ErrorMessage = ""
+	if err := r.Status().Update(ctx, clusterSync); err != nil {
+		log.Error(err, "Failed to update ClusterSync status")
 		return ctrl.Result{}, err
 	}
 
@@ -127,10 +127,10 @@ func (r *SyncPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *SyncPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ClusterSyncReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&syncv1.SyncPolicy{}).
-		Named("syncpolicy").
+		For(&syncv1.ClusterSync{}).
+		Named("clustersync").
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }

@@ -23,12 +23,12 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// SyncPolicySpec defines the desired state of SyncPolicy.
-type SyncPolicySpec struct {
+// ClusterSyncSpec defines the desired state of ClusterSync.
+type ClusterSyncSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of SyncPolicy. Edit syncpolicy_types.go to remove/update
+	// Foo is an example field of ClusterSync. Edit syncpolicy_types.go to remove/update
 	Foo string `json:"foo,omitempty"`
 
 	// RemoteClusterConfig contains the configuration for the remote cluster
@@ -43,8 +43,8 @@ type RemoteClusterConfig struct {
 	KubeconfigSecretNamespace string `json:"kubeconfigSecretNamespace"`
 }
 
-// SyncPolicyStatus defines the observed state of SyncPolicy.
-type SyncPolicyStatus struct {
+// ClusterSyncStatus defines the observed state of ClusterSync.
+type ClusterSyncStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
@@ -59,24 +59,24 @@ type SyncPolicyStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// SyncPolicy is the Schema for the syncpolicies API.
-type SyncPolicy struct {
+// ClusterSync is the Schema for the clustersyncs API.
+type ClusterSync struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   SyncPolicySpec   `json:"spec,omitempty"`
-	Status SyncPolicyStatus `json:"status,omitempty"`
+	Spec   ClusterSyncSpec   `json:"spec,omitempty"`
+	Status ClusterSyncStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// SyncPolicyList contains a list of SyncPolicy.
-type SyncPolicyList struct {
+// ClusterSyncList contains a list of ClusterSync.
+type ClusterSyncList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []SyncPolicy `json:"items"`
+	Items           []ClusterSync `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&SyncPolicy{}, &SyncPolicyList{})
+	SchemeBuilder.Register(&ClusterSync{}, &ClusterSyncList{})
 }

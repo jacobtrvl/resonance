@@ -1,7 +1,7 @@
 apiVersion: sync.io.github.jacobtrvl/v1
-kind: SyncPolicy
+kind: ClusterSync
 metadata:
-  name: syncpolicy-sample
+  name: clustersync-sample
   namespace: default
 spec:
   remoteClusterConfig:
