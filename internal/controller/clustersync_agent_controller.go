@@ -26,9 +26,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -68,21 +68,22 @@ func (r *ClusterSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
-	// Get the kubeconfig secret for the remote cluster
-	kubeconfigSecret := &corev1.Secret{}
-	err := r.Get(ctx, types.NamespacedName{
-		Name:      clusterSync.Spec.RemoteClusterConfig.KubeconfigSecretName,
-		Namespace: clusterSync.Spec.RemoteClusterConfig.KubeconfigSecretNamespace,
-	}, kubeconfigSecret)
-	if err != nil {
-		log.Error(err, "Failed to get kubeconfig secret")
-		clusterSync.Status.SyncStatus = "Error"
-		clusterSync.Status.ErrorMessage = fmt.Sprintf("Failed to get kubeconfig secret: %v", err)
-		if err := r.Status().Update(ctx, clusterSync); err != nil {
-			log.Error(err, "Failed to update ClusterSync status")
-		}
-		return ctrl.Result{}, err
-	}
+	/*
+		// Get the kubeconfig secret for the remote cluster
+		kubeconfigSecret := &corev1.Secret{}
+		err := r.Get(ctx, types.NamespacedName{
+			Name:      clusterSync.Spec.RemoteClusterConfig.KubeconfigSecretName,
+			Namespace: clusterSync.Spec.RemoteClusterConfig.KubeconfigSecretNamespace,
+		}, kubeconfigSecret)
+		if err != nil {
+			log.Error(err, "Failed to get kubeconfig secret")
+			clusterSync.Status.SyncStatus = "Error"
+			clusterSync.Status.ErrorMessage = fmt.Sprintf("Failed to get kubeconfig secret: %v", err)
+			if err := r.Status().Update(ctx, clusterSync); err != nil {
+				log.Error(err, "Failed to update ClusterSync status")
+			}
+			return ctrl.Result{}, err
+		}*/
 
 	// Create a selector for resources with clusterSync=true label
 	selector := labels.SelectorFromSet(labels.Set{"clusterSync": "true"})
@@ -104,6 +105,11 @@ func (r *ClusterSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			log.Error(err, "Failed to update ClusterSync status")
 		}
 		return ctrl.Result{}, err
+	}
+
+	// Print pod details for debugging
+	for _, pod := range podList.Items {
+		log.Info("Pod found", "name", pod.Name, "namespace", pod.Namespace, "status", pod.Status.Phase)
 	}
 
 	// TODO: Implement the actual sync logic to the remote cluster
@@ -130,6 +136,11 @@ func (r *ClusterSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 func (r *ClusterSyncReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&syncv1.ClusterSync{}).
+		// Watch Pods and trigger reconcile when they change
+		Watches(
+			&corev1.Pod{},
+			&handler.EnqueueRequestForObject{},
+		).
 		Named("clustersync").
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
