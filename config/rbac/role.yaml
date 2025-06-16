@@ -5,18 +5,7 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - ""
-  resources:
-  - configmaps
-  - pods
-  - secrets
-  - services
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - sync.io.github.jacobtrvl
+  - sync.jacobtrvl.resonance
   resources:
   - clustersyncs
   verbs:
@@ -28,13 +17,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - sync.io.github.jacobtrvl
+  - sync.jacobtrvl.resonance
   resources:
   - clustersyncs/finalizers
   verbs:
   - update
 - apiGroups:
-  - sync.io.github.jacobtrvl
+  - sync.jacobtrvl.resonance
   resources:
   - clustersyncs/status
   verbs:

@@ -1,6 +1,5 @@
 # Image URL to use all building/pushing image targets
-REGISTRY ?= jacobtrvl
-IMG ?= $(REGISTRY)/resonance-controller:latest
+IMG ?= controller:latest
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -231,6 +230,3 @@ mv $(1) $(1)-$(3) ;\
 } ;\
 ln -sf $(1)-$(3) $(1)
 endef
-
-.PHONY: all-deploy
-all-deploy: docker-build docker-push deploy ## Build, push, and deploy the controller image in one step.

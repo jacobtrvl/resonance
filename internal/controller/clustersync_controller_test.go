@@ -1,5 +1,5 @@
 /*
-Copyright 2025 Jacob Philip.
+Copyright 2025.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -40,11 +40,11 @@ var _ = Describe("ClusterSync Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		clusterSync := &syncv1.ClusterSync{}
+		clustersync := &syncv1.ClusterSync{}
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind ClusterSync")
-			err := k8sClient.Get(ctx, typeNamespacedName, clusterSync)
+			err := k8sClient.Get(ctx, typeNamespacedName, clustersync)
 			if err != nil && errors.IsNotFound(err) {
 				resource := &syncv1.ClusterSync{
 					ObjectMeta: metav1.ObjectMeta{

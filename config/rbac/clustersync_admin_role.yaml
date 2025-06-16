@@ -1,7 +1,7 @@
 # This rule is not used by the project resonance itself.
 # It is provided to allow the cluster admin to help manage permissions for users.
 #
-# Grants full permissions ('*') over sync.io.github.jacobtrvl.
+# Grants full permissions ('*') over sync.jacobtrvl.resonance.
 # This role is intended for users authorized to modify roles and bindings within the cluster,
 # enabling them to delegate specific permissions to other users or groups as needed.
 
@@ -11,17 +11,17 @@ metadata:
   labels:
     app.kubernetes.io/name: resonance
     app.kubernetes.io/managed-by: kustomize
-  name: syncpolicy-admin-role
+  name: clustersync-admin-role
 rules:
 - apiGroups:
-  - sync.io.github.jacobtrvl
+  - sync.jacobtrvl.resonance
   resources:
-  - syncpolicies
+  - clustersyncs
   verbs:
   - '*'
 - apiGroups:
-  - sync.io.github.jacobtrvl
+  - sync.jacobtrvl.resonance
   resources:
-  - syncpolicies/status
+  - clustersyncs/status
   verbs:
   - get

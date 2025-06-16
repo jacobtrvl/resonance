@@ -3,7 +3,7 @@
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
 cliVersion: 4.6.0
-domain: io.github.jacobtrvl
+domain: jacobtrvl.resonance
 layout:
 - go.kubebuilder.io/v4
 projectName: resonance
@@ -13,9 +13,9 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: io.github.jacobtrvl
+  domain: jacobtrvl.resonance
   group: sync
-  kind: SyncPolicy
+  kind: ClusterSync
   path: github.com/jacobtrvl/resonance/api/v1
   version: v1
 version: "3"
