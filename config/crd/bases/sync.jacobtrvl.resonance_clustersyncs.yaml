@@ -39,13 +39,39 @@ spec:
           spec:
             description: ClusterSyncSpec defines the desired state of ClusterSync.
             properties:
-              foo:
-                description: Foo is an example field of ClusterSync. Edit clustersync_types.go
-                  to remove/update
-                type: string
+              remoteClusterConfig:
+                description: RemoteClusterConfig defines the configuration for the
+                  remote cluster
+                properties:
+                  kubeconfigSecretName:
+                    description: KubeconfigSecretName is the name of the secret containing
+                      the kubeconfig for the remote cluster
+                    type: string
+                  kubeconfigSecretNamespace:
+                    description: KubeconfigSecretNamespace is the namespace where
+                      the kubeconfig secret is stored
+                    type: string
+                required:
+                - kubeconfigSecretName
+                - kubeconfigSecretNamespace
+                type: object
+            required:
+            - remoteClusterConfig
             type: object
           status:
             description: ClusterSyncStatus defines the observed state of ClusterSync.
+            properties:
+              errorMessage:
+                description: ErrorMessage contains any error message if sync failed
+                type: string
+              lastSyncTime:
+                description: LastSyncTime is the timestamp of the last successful
+                  sync
+                format: date-time
+                type: string
+              syncStatus:
+                description: SyncStatus indicates the current sync status
+                type: string
             type: object
         type: object
     served: true

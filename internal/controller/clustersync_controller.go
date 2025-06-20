@@ -1,5 +1,5 @@
 /*
-Copyright 2025.
+Copyright 2025 Jacob Philip.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,11 +18,17 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	syncv1 "github.com/jacobtrvl/resonance/api/v1"
 )
@@ -47,11 +53,85 @@ type ClusterSyncReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.21.0/pkg/reconcile
 func (r *ClusterSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = logf.FromContext(ctx)
+	log := log.FromContext(ctx)
 
-	// TODO(user): your logic here
+	// Fetch the ClusterSync instance
+	clusterSync := &syncv1.ClusterSync{}
+	if err := r.Get(ctx, req.NamespacedName, clusterSync); err != nil {
+		if errors.IsNotFound(err) {
+			// Request object not found, could have been deleted after reconcile request.
+			// Return and don't requeue
+			log.Info("ClusterSync resource not found. Ignoring since object must be deleted")
+			return ctrl.Result{}, nil
+		}
+		// Error reading the object - requeue the request.
+		log.Error(err, "Failed to get ClusterSync")
+		return ctrl.Result{}, err
+	}
 
-	return ctrl.Result{}, nil
+	/*
+		// Get the kubeconfig secret for the remote cluster
+		kubeconfigSecret := &corev1.Secret{}
+		err := r.Get(ctx, types.NamespacedName{
+			Name:      clusterSync.Spec.RemoteClusterConfig.KubeconfigSecretName,
+			Namespace: clusterSync.Spec.RemoteClusterConfig.KubeconfigSecretNamespace,
+		}, kubeconfigSecret)
+		if err != nil {
+			log.Error(err, "Failed to get kubeconfig secret")
+			clusterSync.Status.SyncStatus = "Error"
+			clusterSync.Status.ErrorMessage = fmt.Sprintf("Failed to get kubeconfig secret: %v", err)
+			if err := r.Status().Update(ctx, clusterSync); err != nil {
+				log.Error(err, "Failed to update ClusterSync status")
+			}
+			return ctrl.Result{}, err
+		}*/
+
+	// Create a selector for resources with clusterSync=true label
+	selector := labels.SelectorFromSet(labels.Set{"clusterSync": "true"})
+
+	// List all resources with the clusterSync=true label
+	// Note: This is a simplified example. In a real implementation, you would need to:
+	// 1. List different types of resources (Pods, Services, ConfigMaps, etc.)
+	// 2. Handle each resource type appropriately
+	// 3. Implement proper error handling and retry logic
+	// 4. Add proper synchronization mechanisms
+
+	// Example for Pods
+	podList := &corev1.PodList{}
+	if err := r.List(ctx, podList, &client.ListOptions{LabelSelector: selector}); err != nil {
+		log.Error(err, "Failed to list pods")
+		clusterSync.Status.SyncStatus = "Error"
+		clusterSync.Status.ErrorMessage = fmt.Sprintf("Failed to list pods: %v", err)
+		if err := r.Status().Update(ctx, clusterSync); err != nil {
+			log.Error(err, "Failed to update ClusterSync status")
+		}
+		return ctrl.Result{}, err
+	}
+
+	// Print pod details for debugging
+	for _, pod := range podList.Items {
+		log.Info("Pod found", "name", pod.Name, "namespace", pod.Namespace, "status", pod.Status.Phase)
+	}
+
+	// TODO: Implement the actual sync logic to the remote cluster
+	// This would involve:
+	// 1. Creating a client for the remote cluster using the kubeconfig
+	// 2. Syncing each resource to the remote cluster
+	// 3. Handling conflicts and updates
+	// 4. Implementing proper error handling and retry logic
+
+	// Update the status
+	clusterSync.Status.LastSyncTime = &metav1.Time{Time: time.Now()}
+	clusterSync.Status.SyncStatus = "Synced"
+	clusterSync.Status.ErrorMessage = ""
+	if err := r.Status().Update(ctx, clusterSync); err != nil {
+		log.Error(err, "Failed to update ClusterSync status")
+		return ctrl.Result{}, err
+	}
+
+	// Requeue after 5 minutes to check for updates
+	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
+
 }
 
 // SetupWithManager sets up the controller with the Manager.

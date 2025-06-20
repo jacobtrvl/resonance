@@ -1,5 +1,5 @@
 /*
-Copyright 2025.
+Copyright 2025 Jacob Philip.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,17 +25,25 @@ import (
 
 // ClusterSyncSpec defines the desired state of ClusterSync.
 type ClusterSyncSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	RemoteClusterConfig RemoteClusterConfig `json:"remoteClusterConfig"`
+}
 
-	// Foo is an example field of ClusterSync. Edit clustersync_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+// RemoteClusterConfig defines the configuration for the remote cluster
+type RemoteClusterConfig struct {
+	// KubeconfigSecretName is the name of the secret containing the kubeconfig for the remote cluster
+	KubeconfigSecretName string `json:"kubeconfigSecretName"`
+	// KubeconfigSecretNamespace is the namespace where the kubeconfig secret is stored
+	KubeconfigSecretNamespace string `json:"kubeconfigSecretNamespace"`
 }
 
 // ClusterSyncStatus defines the observed state of ClusterSync.
 type ClusterSyncStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// LastSyncTime is the timestamp of the last successful sync
+	LastSyncTime *metav1.Time `json:"lastSyncTime,omitempty"`
+	// SyncStatus indicates the current sync status
+	SyncStatus string `json:"syncStatus,omitempty"`
+	// ErrorMessage contains any error message if sync failed
+	ErrorMessage string `json:"errorMessage,omitempty"`
 }
 
 // +kubebuilder:object:root=true
