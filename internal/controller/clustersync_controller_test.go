@@ -30,7 +30,7 @@ import (
 	syncv1 "github.com/jacobtrvl/resonance/api/v1"
 )
 
-var _ = Describe("SyncPolicy Controller", func() {
+var _ = Describe("ClusterSync Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
 
@@ -40,13 +40,13 @@ var _ = Describe("SyncPolicy Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		syncpolicy := &syncv1.SyncPolicy{}
+		clustersync := &syncv1.ClusterSync{}
 
 		BeforeEach(func() {
-			By("creating the custom resource for the Kind SyncPolicy")
-			err := k8sClient.Get(ctx, typeNamespacedName, syncpolicy)
+			By("creating the custom resource for the Kind ClusterSync")
+			err := k8sClient.Get(ctx, typeNamespacedName, clustersync)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &syncv1.SyncPolicy{
+				resource := &syncv1.ClusterSync{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
@@ -59,16 +59,16 @@ var _ = Describe("SyncPolicy Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &syncv1.SyncPolicy{}
+			resource := &syncv1.ClusterSync{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
-			By("Cleanup the specific resource instance SyncPolicy")
+			By("Cleanup the specific resource instance ClusterSync")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
-			controllerReconciler := &SyncPolicyReconciler{
+			controllerReconciler := &ClusterSyncReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}
