@@ -53,7 +53,7 @@ type ClusterSyncReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.21.0/pkg/reconcile
 func (r *ClusterSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
+	logger := log.FromContext(ctx)
 
 	// Fetch the ClusterSync instance
 	clusterSync := &syncv1.ClusterSync{}
@@ -61,11 +61,11 @@ func (r *ClusterSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Return and don't requeue
-			log.Info("ClusterSync resource not found. Ignoring since object must be deleted")
+			logger.Info("ClusterSync resource not found. Ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		log.Error(err, "Failed to get ClusterSync")
+		logger.Error(err, "Failed to get ClusterSync")
 		return ctrl.Result{}, err
 	}
 
@@ -99,18 +99,18 @@ func (r *ClusterSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// Example for Pods
 	podList := &corev1.PodList{}
 	if err := r.List(ctx, podList, &client.ListOptions{LabelSelector: selector}); err != nil {
-		log.Error(err, "Failed to list pods")
+		logger.Error(err, "Failed to list pods")
 		clusterSync.Status.SyncStatus = "Error"
 		clusterSync.Status.ErrorMessage = fmt.Sprintf("Failed to list pods: %v", err)
 		if err := r.Status().Update(ctx, clusterSync); err != nil {
-			log.Error(err, "Failed to update ClusterSync status")
+			logger.Error(err, "Failed to update ClusterSync status")
 		}
 		return ctrl.Result{}, err
 	}
 
 	// Print pod details for debugging
 	for _, pod := range podList.Items {
-		log.Info("Pod found", "name", pod.Name, "namespace", pod.Namespace, "status", pod.Status.Phase)
+		logger.Info("Pod found", "name", pod.Name, "namespace", pod.Namespace, "status", pod.Status.Phase)
 	}
 
 	// TODO: Implement the actual sync logic to the remote cluster
@@ -125,7 +125,7 @@ func (r *ClusterSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	clusterSync.Status.SyncStatus = "Synced"
 	clusterSync.Status.ErrorMessage = ""
 	if err := r.Status().Update(ctx, clusterSync); err != nil {
-		log.Error(err, "Failed to update ClusterSync status")
+		logger.Error(err, "Failed to update ClusterSync status")
 		return ctrl.Result{}, err
 	}
 
