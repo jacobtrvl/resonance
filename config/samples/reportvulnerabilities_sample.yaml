@@ -1,0 +1,13 @@
+apiVersion: sync.jacobtrvl.resonance/v1
+kind: ReportVulnerabilities
+metadata:
+  name: sample-report
+  namespace: default
+spec:
+  data: |
+    {
+      "vulnerabilities": [
+        {"id": "CVE-2025-0001", "severity": "HIGH", "description": "Sample vulnerability 1"},
+        {"id": "CVE-2025-0002", "severity": "MEDIUM", "description": "Sample vulnerability 2"}
+      ]
+    }

@@ -166,6 +166,10 @@ undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.
 .PHONY: all-deploy
 all-deploy: build docker-build docker-push deploy ## Build, push image, and deploy to cluster.
 
+.PHONY: deploy-samples
+deploy-samples: ## Apply all sample CRs in config/samples to the current cluster.
+	$(KUSTOMIZE) build config/samples | kubectl apply -f -
+
 ##@ Dependencies
 
 ## Location to install dependencies to

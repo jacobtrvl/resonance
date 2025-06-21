@@ -209,6 +209,14 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "ClusterSync")
 		os.Exit(1)
 	}
+
+	if err := (&controller.ReportVulnerabilitiesReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ReportVulnerabilities")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	if metricsCertWatcher != nil {
