@@ -86,7 +86,7 @@ func main() {
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 	flag.BoolVar(&isMaster, "master", false, "Run in master mode (do not start agent controllers)")
-	flag.StringVar(&masterKubeconfigPath, "master-kubeconfig", "", "Path to the master cluster kubeconfig file (optional, can use MASTER_KUBECONFIG env var)")
+	flag.StringVar(&masterKubeconfigPath, "master-kubeconfig", "", "Path to the master cluster kubeconfig file")
 	opts := zap.Options{
 		Development: true,
 	}
