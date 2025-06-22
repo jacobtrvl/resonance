@@ -63,9 +63,12 @@ spec:
         args:
           - --leader-elect
           - --health-probe-bind-address=:8081
-          - --master
         image: controller:latest
         name: manager
+        env:
+        - name: MASTER_KUBECONFIG
+          value: |-
+              <set the kubeconfig for the master cluster here>
         ports: []
         securityContext:
           allowPrivilegeEscalation: false
@@ -95,5 +98,5 @@ spec:
             memory: 64Mi
         volumeMounts: []
       volumes: []
-      serviceAccountName: controller-manager
+      serviceAccountName: resonance-controller-manager
       terminationGracePeriodSeconds: 10

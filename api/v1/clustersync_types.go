@@ -20,22 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
-// ClusterSyncSpec defines the desired state of ClusterSync.
-type ClusterSyncSpec struct {
-	RemoteClusterConfig RemoteClusterConfig `json:"remoteClusterConfig"`
-}
-
-// RemoteClusterConfig defines the configuration for the remote cluster
-type RemoteClusterConfig struct {
-	// KubeconfigSecretName is the name of the secret containing the kubeconfig for the remote cluster
-	KubeconfigSecretName string `json:"kubeconfigSecretName"`
-	// KubeconfigSecretNamespace is the namespace where the kubeconfig secret is stored
-	KubeconfigSecretNamespace string `json:"kubeconfigSecretNamespace"`
-}
-
 // ClusterSyncStatus defines the observed state of ClusterSync.
 type ClusterSyncStatus struct {
 	// LastSyncTime is the timestamp of the last successful sync
@@ -54,7 +38,6 @@ type ClusterSync struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ClusterSyncSpec   `json:"spec,omitempty"`
 	Status ClusterSyncStatus `json:"status,omitempty"`
 }
 
@@ -67,6 +50,35 @@ type ClusterSyncList struct {
 	Items           []ClusterSync `json:"items"`
 }
 
+// ReportVulnerabilitiesSpec defines the desired state of ReportVulnerabilities
+type ReportVulnerabilitiesSpec struct {
+	Data string `json:"data,omitempty"`
+}
+
+type ReportVulnerabilitiesStatus struct {
+	// Add status fields if needed
+}
+
+// ReportVulnerabilities is the Schema for the reportvulnerabilities API
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+type ReportVulnerabilities struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   ReportVulnerabilitiesSpec   `json:"spec,omitempty"`
+	Status ReportVulnerabilitiesStatus `json:"status,omitempty"`
+}
+
+// ReportVulnerabilitiesList contains a list of ReportVulnerabilities
+// +kubebuilder:object:root=true
+type ReportVulnerabilitiesList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []ReportVulnerabilities `json:"items"`
+}
+
 func init() {
 	SchemeBuilder.Register(&ClusterSync{}, &ClusterSyncList{})
+	SchemeBuilder.Register(&ReportVulnerabilities{}, &ReportVulnerabilitiesList{})
 }

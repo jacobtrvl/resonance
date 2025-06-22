@@ -19,15 +19,13 @@ package controller
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	syncv1 "github.com/jacobtrvl/resonance/api/v1"
@@ -37,6 +35,8 @@ import (
 type ClusterSyncReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	// Add a client for the master cluster
+	MasterClient client.Client
 }
 
 // +kubebuilder:rbac:groups=sync.jacobtrvl.resonance,resources=clustersyncs,verbs=get;list;watch;create;update;patch;delete
@@ -55,89 +55,89 @@ type ClusterSyncReconciler struct {
 func (r *ClusterSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	// Fetch the ClusterSync instance
-	clusterSync := &syncv1.ClusterSync{}
-	if err := r.Get(ctx, req.NamespacedName, clusterSync); err != nil {
-		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Return and don't requeue
-			logger.Info("ClusterSync resource not found. Ignoring since object must be deleted")
-			return ctrl.Result{}, nil
+	// --- ClusterSync logic (as before) ---
+	agentClusterSync := &syncv1.ClusterSync{}
+
+	// --- ReportVulnerabilities logic: watch and sync all ReportVulnerabilities to master ---
+	var reportList syncv1.ReportVulnerabilitiesList
+
+	if err := r.List(ctx, &reportList); err != nil {
+		logger.Error(err, "Failed to list ReportVulnerabilities")
+	} else if r.MasterClient != nil {
+		for _, agentReport := range reportList.Items {
+			masterReport := &syncv1.ReportVulnerabilities{}
+			err := r.MasterClient.Get(ctx, client.ObjectKey{Name: agentReport.Name, Namespace: agentReport.Namespace}, masterReport)
+			if err == nil {
+				if !reflect.DeepEqual(agentReport.Spec.Data, masterReport.Spec.Data) {
+					masterReport.Spec.Data = agentReport.Spec.Data
+					if err := r.MasterClient.Update(ctx, masterReport); err != nil {
+						logger.Error(err, "Failed to update ReportVulnerabilities in master cluster", "name", agentReport.Name)
+					}
+				}
+			} else {
+				logger.Error(err, "Failed to get ReportVulnerabilities in master cluster", "name", agentReport.Name)
+			}
 		}
-		// Error reading the object - requeue the request.
-		logger.Error(err, "Failed to get ClusterSync")
-		return ctrl.Result{}, err
 	}
 
 	/*
-		// Get the kubeconfig secret for the remote cluster
-		kubeconfigSecret := &corev1.Secret{}
-		err := r.Get(ctx, types.NamespacedName{
-			Name:      clusterSync.Spec.RemoteClusterConfig.KubeconfigSecretName,
-			Namespace: clusterSync.Spec.RemoteClusterConfig.KubeconfigSecretNamespace,
-		}, kubeconfigSecret)
-		if err != nil {
-			log.Error(err, "Failed to get kubeconfig secret")
-			clusterSync.Status.SyncStatus = "Error"
-			clusterSync.Status.ErrorMessage = fmt.Sprintf("Failed to get kubeconfig secret: %v", err)
-			if err := r.Status().Update(ctx, clusterSync); err != nil {
-				log.Error(err, "Failed to update ClusterSync status")
+		// --- Deployment logic: sync Deployments from master to agent ---
+		// There no watch for Deployment changes, so this will only reconcile on queing of ClusterSync due to other changes/RequeueAfter time.
+		masterDeployList := &appsv1.DeploymentList{}
+		masterSelector := labels.SelectorFromSet(labels.Set{"clusterSync": "true"})
+		if err := r.MasterClient.List(ctx, masterDeployList, &client.ListOptions{LabelSelector: masterSelector}); err != nil {
+			logger.Error(err, "Failed to list Deployments in master cluster")
+		} else {
+			for _, masterDeploy := range masterDeployList.Items {
+				agentDeploy := &appsv1.Deployment{}
+				err := r.Get(ctx, client.ObjectKey{Name: masterDeploy.Name, Namespace: masterDeploy.Namespace}, agentDeploy)
+				if err != nil {
+					if errors.IsNotFound(err) {
+						// Create in agent if not found
+						newDeploy := masterDeploy.DeepCopy()
+						newDeploy.ResourceVersion = ""
+						if err := r.Create(ctx, newDeploy); err != nil {
+							logger.Error(err, "Failed to create Deployment in agent cluster", "name", masterDeploy.Name)
+						}
+					} else {
+						logger.Error(err, "Failed to get Deployment in agent cluster", "name", masterDeploy.Name)
+					}
+				} else {
+					// Update if spec differs
+					if !reflect.DeepEqual(masterDeploy.Spec, agentDeploy.Spec) {
+						agentDeploy.Spec = masterDeploy.Spec
+						if err := r.Update(ctx, agentDeploy); err != nil {
+							logger.Error(err, "Failed to update Deployment in agent cluster", "name", masterDeploy.Name)
+						}
+					}
+				}
 			}
-			return ctrl.Result{}, err
 		}*/
 
-	// Create a selector for resources with clusterSync=true label
-	selector := labels.SelectorFromSet(labels.Set{"clusterSync": "true"})
-
-	// List all resources with the clusterSync=true label
-	// Note: This is a simplified example. In a real implementation, you would need to:
-	// 1. List different types of resources (Pods, Services, ConfigMaps, etc.)
-	// 2. Handle each resource type appropriately
-	// 3. Implement proper error handling and retry logic
-	// 4. Add proper synchronization mechanisms
-
-	// Example for Pods
-	podList := &corev1.PodList{}
-	if err := r.List(ctx, podList, &client.ListOptions{LabelSelector: selector}); err != nil {
-		logger.Error(err, "Failed to list pods")
-		clusterSync.Status.SyncStatus = "Error"
-		clusterSync.Status.ErrorMessage = fmt.Sprintf("Failed to list pods: %v", err)
-		if err := r.Status().Update(ctx, clusterSync); err != nil {
+	// Update agentSyncStatus in ClusterSync status
+	if err := r.Get(ctx, req.NamespacedName, agentClusterSync); err != nil {
+		if r.MasterClient != nil {
+			logger.Error(err, "Failed to get ClusterSync for status update")
+		}
+	} else {
+		// Example: set agentSyncStatus to "Synced" and update lastSyncTime
+		agentClusterSync.Status.SyncStatus = "Synced"
+		if err := r.Status().Update(ctx, agentClusterSync); err != nil {
 			logger.Error(err, "Failed to update ClusterSync status")
 		}
-		return ctrl.Result{}, err
 	}
-
-	// Print pod details for debugging
-	for _, pod := range podList.Items {
-		logger.Info("Pod found", "name", pod.Name, "namespace", pod.Namespace, "status", pod.Status.Phase)
-	}
-
-	// TODO: Implement the actual sync logic to the remote cluster
-	// This would involve:
-	// 1. Creating a client for the remote cluster using the kubeconfig
-	// 2. Syncing each resource to the remote cluster
-	// 3. Handling conflicts and updates
-	// 4. Implementing proper error handling and retry logic
-
-	// Update the status
-	clusterSync.Status.LastSyncTime = &metav1.Time{Time: time.Now()}
-	clusterSync.Status.SyncStatus = "Synced"
-	clusterSync.Status.ErrorMessage = ""
-	if err := r.Status().Update(ctx, clusterSync); err != nil {
-		logger.Error(err, "Failed to update ClusterSync status")
-		return ctrl.Result{}, err
-	}
-
-	// Requeue after 5 minutes to check for updates
-	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
-
+	fmt.Println("Reconcile called for ClusterSync:", req.NamespacedName)
+	return ctrl.Result{RequeueAfter: 1 * time.Minute}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ClusterSyncReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&syncv1.ClusterSync{}).
+		Watches(
+			&syncv1.ReportVulnerabilities{},
+			&handler.EnqueueRequestForObject{},
+		).
 		Named("clustersync").
 		Complete(r)
 }

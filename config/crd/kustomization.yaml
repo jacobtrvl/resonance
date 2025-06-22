@@ -3,6 +3,7 @@
 # It should be run by config/default
 resources:
 - bases/sync.jacobtrvl.resonance_clustersyncs.yaml
+- bases/sync.jacobtrvl.resonance_reportvulnerabilities.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:

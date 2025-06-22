@@ -166,6 +166,10 @@ undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.
 .PHONY: all-deploy
 all-deploy: build docker-build docker-push deploy ## Build, push image, and deploy to cluster.
 
+.PHONY: deploy-samples
+deploy-samples: ## Apply all sample CRs in config/samples to the current cluster.
+	$(KUSTOMIZE) build config/samples | kubectl apply -f -
+
 ##@ Dependencies
 
 ## Location to install dependencies to
@@ -233,3 +237,8 @@ mv $(1) $(1)-$(3) ;\
 } ;\
 ln -sf $(1)-$(3) $(1)
 endef
+
+.PHONY: agent-deploy
+agent-deploy: build docker-build docker-push ## Build, push image, and deploy agent to kind-agent-cluster.
+	cd config/agent && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/agent | $(KUBECTL) --context kind-agent-cluster apply -f -

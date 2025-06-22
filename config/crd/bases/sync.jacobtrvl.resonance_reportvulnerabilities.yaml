@@ -4,20 +4,21 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.18.0
-  name: clustersyncs.sync.jacobtrvl.resonance
+  name: reportvulnerabilities.sync.jacobtrvl.resonance
 spec:
   group: sync.jacobtrvl.resonance
   names:
-    kind: ClusterSync
-    listKind: ClusterSyncList
-    plural: clustersyncs
-    singular: clustersync
+    kind: ReportVulnerabilities
+    listKind: ReportVulnerabilitiesList
+    plural: reportvulnerabilities
+    singular: reportvulnerabilities
   scope: Namespaced
   versions:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: ClusterSync is the Schema for the clustersyncs API.
+        description: ReportVulnerabilities is the Schema for the reportvulnerabilities
+          API
         properties:
           apiVersion:
             description: |-
@@ -36,20 +37,13 @@ spec:
             type: string
           metadata:
             type: object
-          status:
-            description: ClusterSyncStatus defines the observed state of ClusterSync.
+          spec:
+            description: ReportVulnerabilitiesSpec defines the desired state of ReportVulnerabilities
             properties:
-              errorMessage:
-                description: ErrorMessage contains any error message if sync failed
+              data:
                 type: string
-              lastSyncTime:
-                description: LastSyncTime is the timestamp of the last successful
-                  sync
-                format: date-time
-                type: string
-              syncStatus:
-                description: SyncStatus indicates the current sync status
-                type: string
+            type: object
+          status:
             type: object
         type: object
     served: true

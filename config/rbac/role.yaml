@@ -8,6 +8,7 @@ rules:
   - sync.jacobtrvl.resonance
   resources:
   - clustersyncs
+  - reportvulnerabilities
   verbs:
   - create
   - delete
@@ -26,10 +27,8 @@ rules:
   - sync.jacobtrvl.resonance
   resources:
   - clustersyncs/status
+  - reportvulnerabilities/status
   verbs:
   - get
   - patch
   - update
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "list", "watch"]
