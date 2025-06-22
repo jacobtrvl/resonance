@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -115,7 +116,9 @@ func (r *ClusterSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	// Update agentSyncStatus in ClusterSync status
 	if err := r.Get(ctx, req.NamespacedName, agentClusterSync); err != nil {
-		logger.Error(err, "Failed to get ClusterSync for status update")
+		if r.MasterClient != nil {
+			logger.Error(err, "Failed to get ClusterSync for status update")
+		}
 	} else {
 		// Example: set agentSyncStatus to "Synced" and update lastSyncTime
 		agentClusterSync.Status.SyncStatus = "Synced"
@@ -123,7 +126,8 @@ func (r *ClusterSyncReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			logger.Error(err, "Failed to update ClusterSync status")
 		}
 	}
-	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
+	fmt.Println("Reconcile called for ClusterSync:", req.NamespacedName)
+	return ctrl.Result{RequeueAfter: 1 * time.Minute}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

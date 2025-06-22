@@ -237,3 +237,8 @@ mv $(1) $(1)-$(3) ;\
 } ;\
 ln -sf $(1)-$(3) $(1)
 endef
+
+.PHONY: agent-deploy
+agent-deploy: build docker-build docker-push ## Build, push image, and deploy agent to kind-agent-cluster.
+	cd config/agent && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/agent | $(KUBECTL) --context kind-agent-cluster apply -f -

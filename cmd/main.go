@@ -25,12 +25,14 @@ import (
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
@@ -64,6 +66,8 @@ func main() {
 	var secureMetrics bool
 	var enableHTTP2 bool
 	var tlsOpts []func(*tls.Config)
+	var isMaster bool
+	var masterKubeconfigPath string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -81,6 +85,8 @@ func main() {
 	flag.StringVar(&metricsCertKey, "metrics-cert-key", "tls.key", "The name of the metrics server key file.")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
+	flag.BoolVar(&isMaster, "master", false, "Run in master mode (do not start agent controllers)")
+	flag.StringVar(&masterKubeconfigPath, "master-kubeconfig", "", "Path to the master cluster kubeconfig file (optional, can use MASTER_KUBECONFIG env var)")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -205,17 +211,27 @@ func main() {
 	if err := (&controller.ClusterSyncReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		MasterClient: func() client.Client {
+			c, err := getMasterClient(masterKubeconfigPath, mgr.GetScheme())
+			if err != nil {
+				setupLog.Error(err, "unable to create master client for ClusterSyncReconciler")
+				return nil
+			}
+			return c
+		}(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ClusterSync")
 		os.Exit(1)
 	}
 
-	if err := (&controller.ReportVulnerabilitiesReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ReportVulnerabilities")
-		os.Exit(1)
+	if !isMaster {
+		if err := (&controller.ReportVulnerabilitiesReconciler{
+			Client: mgr.GetClient(),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ReportVulnerabilities")
+			os.Exit(1)
+		}
 	}
 	// +kubebuilder:scaffold:builder
 
@@ -249,4 +265,27 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+// getMasterClient returns a Kubernetes client for the master cluster.
+// It will use the MASTER_KUBECONFIG environment variable if set and non-empty,
+// otherwise it will read from the provided file path.
+func getMasterClient(masterKubeconfigPath string, scheme *runtime.Scheme) (client.Client, error) {
+	if kubeconfigEnv := os.Getenv("MASTER_KUBECONFIG"); kubeconfigEnv != "" {
+		restConfig, err := clientcmd.RESTConfigFromKubeConfig([]byte(kubeconfigEnv))
+		if err != nil {
+			return nil, err
+		}
+		return client.New(restConfig, client.Options{Scheme: scheme})
+	}
+	// fallback to file path
+	kubeconfigBytes, err := os.ReadFile(masterKubeconfigPath)
+	if err != nil {
+		return nil, err
+	}
+	restConfig, err := clientcmd.RESTConfigFromKubeConfig(kubeconfigBytes)
+	if err != nil {
+		return nil, err
+	}
+	return client.New(restConfig, client.Options{Scheme: scheme})
 }
