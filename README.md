@@ -1,8 +1,39 @@
 # resonance
-// TODO(user): Add simple overview of use/purpose
+Resonance is a simple, experimental multi-cluster Kubernetes operator designed for edge-to-core resource synchronization in edge computing environments. It aims to keep custom resources consistent across edge and core (master) clusters, addressing the unique challenges of distributed edge architectures.
+
+## Architecture Overview
+
+```mermaid
+graph TD
+  subgraph "Edge Clusters"
+    Edge1["Edge Cluster 1"]
+    Edge2["Edge Cluster 2"]
+    EdgeN["Edge Cluster N"]
+  end
+  subgraph "Core Cluster"
+    Core["Core (Master) Cluster"]
+  end
+  Edge1 -- "CRD Sync" --> Core
+  Edge2 -- "CRD Sync" --> Core
+  EdgeN -- "CRD Sync" --> Core
+  Core -- "future: reverse sync" --> Edge1
+  Core -- "future: reverse sync" --> Edge2
+  Core -- "future: reverse sync" --> EdgeN
+```
+This diagram shows the basic flow: edge clusters synchronize selected resources to the core (master) cluster. Future phases will add reverse sync and more advanced features.
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+Resonance is a proof-of-concept (POC) project focused on synchronizing Kubernetes resources from edge clusters to a central core (master) cluster. In its initial phase, Resonance provides a straightforward controller that uses the Kubernetes API to sync a set of pre-defined (sample) CRDs from edge clusters to the core. This enables a basic, reliable mechanism for propagating resource state from distributed edge locations to a central cluster.
+
+Future phases will make Resonance more generic and powerful:
+- Add support for syncing arbitrary CRDs and resources, not just pre-defined samples.
+- Introduce gRPC-based communication for more efficient and flexible edge-to-core synchronization.
+- Implement reverse synchronization, allowing updates from the core to be propagated back to edge clusters, ensuring bidirectional consistency.
+- Address advanced challenges such as conflict resolution, so that edge clusters can safely merge updates from both the master and their own local changes.
+
+The major architectural challenge is enabling edge clusters to receive and reconcile updates from both the master and their own local state, while handling conflicts in a robust way. Resonance is an experimental platform to explore and solve these problems in a simplified, modular manner.
+
+This project is intended for experimentation and learning in the edge computing space, and is not yet production-ready. Contributions and feedback are welcome!
 
 ## Getting Started
 
@@ -111,15 +142,22 @@ previously added to 'dist/chart/values.yaml' or 'dist/chart/manager/manager.yaml
 is manually re-applied afterwards.
 
 ## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
+We welcome contributions! To contribute:
+- Fork the repository and create a feature branch.
+- Make your changes, following Go and Kubernetes best practices.
+- Run `make fmt` and `make vet` to ensure code quality.
+- Add or update tests as needed (`make test` for unit tests, `make test-e2e` for end-to-end tests).
+- Submit a pull request with a clear description of your changes.
+- For major changes, please open an issue first to discuss your proposal.
 
-**NOTE:** Run `make help` for more information on all potential `make` targets
+
+**NOTE:** Run `make help` for more information on all potential `make` targets.
 
 More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
 
 ## License
 
-Copyright 2025.
+Copyright 2025 Jacob Philip.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
